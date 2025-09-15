@@ -14,6 +14,9 @@ from dataclasses import dataclass, asdict
 from enum import Enum
 from tqdm import tqdm
 
+# Import LLM client for enhanced relationship discovery
+from ..utils.llm_client import LangChainLLMClient
+
 # File paths
 OUTPUT_DIR = Path(__file__).parent.parent.parent / "output"
 DATA_DIR = OUTPUT_DIR / "data"
@@ -395,12 +398,381 @@ def enhance_schema_with_llm(schema: GraphSchema, df: pd.DataFrame) -> GraphSchem
 
     print("Enhancing schema with LLM-assisted relationship discovery...")
 
-    # For now, implement basic semantic similarity detection
-    # In a full implementation, this would use LLM API calls
+    enhanced_relationships = schema.relationships.copy()
+
+    try:
+        # Initialize LLM client
+        llm_client = LangChainLLMClient()
+        print("SUCCESS: LLM client initialized for relationship discovery")
+
+        # Get HSN nodes for LLM analysis (focus on detailed product codes)
+        hsn_nodes = {node_id: props for node_id, props in schema.nodes.items()
+                    if node_id.startswith('hsn_') and props.description.strip()}
+
+        print(f"Analyzing {len(hsn_nodes)} HSN nodes with LLM...")
+
+        # Process nodes in batches to avoid overwhelming the LLM
+        batch_size = 5
+        processed_count = 0
+
+        for i in tqdm(range(0, len(hsn_nodes), batch_size), desc="LLM relationship discovery"):
+            batch_nodes = list(hsn_nodes.items())[i:i+batch_size]
+
+            for node_id1, props1 in batch_nodes:
+                # Use LLM to analyze product relationships
+                product_data = {
+                    'description': props1.description,
+                    'hsn_code': props1.code,
+                    'category': props1.title or 'HSN Product'
+                }
+
+                try:
+                    # Get LLM-generated relationships for this product
+                    llm_relationships = llm_client.generate_product_relationships(product_data)
+
+                    # Extract similar products and create relationships
+                    similar_products = llm_relationships.get('similar_products', [])
+                    for similar_product in similar_products[:3]:  # Limit to top 3
+                        # Find matching nodes in the schema
+                        matching_nodes = find_nodes_by_description(schema, similar_product)
+
+                        for matching_node_id in matching_nodes[:2]:  # Limit connections per product
+                            if matching_node_id != node_id1:  # Don't connect to self
+                                enhanced_relationships.append(Relationship(
+                                    source_id=node_id1,
+                                    target_id=matching_node_id,
+                                    type=RelationshipType.HAS_SIMILAR_DESCRIPTION,
+                                    properties={
+                                        "similarity_score": 0.8,  # High confidence from LLM
+                                        "llm_discovered": True,
+                                        "similar_product": similar_product,
+                                        "relationship_reason": "LLM-identified semantic similarity"
+                                    }
+                                ))
+
+                    # Extract categories and create cross-domain relationships
+                    categories = llm_relationships.get('categories', [])
+                    for category in categories[:2]:  # Limit categories
+                        # Find nodes in the same category
+                        category_nodes = find_nodes_by_category(schema, category)
+
+                        for category_node_id in category_nodes[:3]:  # Limit connections
+                            if category_node_id != node_id1:
+                                # Create a new relationship type for category similarity
+                                enhanced_relationships.append(Relationship(
+                                    source_id=node_id1,
+                                    target_id=category_node_id,
+                                    type=RelationshipType.HAS_SIMILAR_DESCRIPTION,  # Could be extended to new type
+                                    properties={
+                                        "similarity_score": 0.7,
+                                        "llm_discovered": True,
+                                        "shared_category": category,
+                                        "relationship_reason": f"LLM-identified category similarity: {category}"
+                                    }
+                                ))
+
+                except Exception as e:
+                    print(f"WARNING: LLM analysis failed for {node_id1}: {str(e)}")
+                    continue
+
+            processed_count += len(batch_nodes)
+            print(f"Processed {processed_count}/{len(hsn_nodes)} nodes with LLM")
+
+        # Cross-domain relationship discovery
+        print("Discovering cross-domain relationships...")
+        cross_domain_relationships = discover_cross_domain_relationships_llm(llm_client, schema, hsn_nodes)
+        enhanced_relationships.extend(cross_domain_relationships)
+
+        # Semantic similarity analysis between different levels
+        print("Analyzing semantic similarities across hierarchy levels...")
+        semantic_relationships = discover_semantic_relationships_llm(llm_client, schema)
+        enhanced_relationships.extend(semantic_relationships)
+
+        # Keep the original export policy relationships (they're still valuable)
+        policy_groups = {}
+        for node_id, node_props in schema.nodes.items():
+            policy = node_props.export_policy.strip()
+            if policy:
+                if policy not in policy_groups:
+                    policy_groups[policy] = []
+                policy_groups[policy].append(node_id)
+
+        for policy, node_ids in policy_groups.items():
+            if len(node_ids) > 1:
+                for i, node_id1 in enumerate(node_ids):
+                    for node_id2 in node_ids[i+1:]:
+                        enhanced_relationships.append(Relationship(
+                            source_id=node_id1,
+                            target_id=node_id2,
+                            type=RelationshipType.SHARES_EXPORT_POLICY,
+                            properties={
+                                "policy_type": policy,
+                                "policy_details": f"Shared export policy: {policy}"
+                            }
+                        ))
+
+        # Update metadata with LLM enhancement details
+        schema.metadata["llm_enhanced"] = True
+        schema.metadata["llm_model_used"] = "openrouter_llm"
+        schema.metadata["total_relationships_llm"] = len(enhanced_relationships)
+        schema.metadata["new_relationships"] = len(enhanced_relationships) - len(schema.relationships)
+        schema.metadata["llm_processed_nodes"] = processed_count
+        schema.metadata["llm_discovery_timestamp"] = pd.Timestamp.now().isoformat()
+
+        schema.relationships = enhanced_relationships
+
+        print(f"SUCCESS: Schema enhanced with {len(enhanced_relationships) - len(schema.relationships)} additional LLM-discovered relationships")
+
+    except Exception as e:
+        print(f"ERROR: LLM enhancement failed: {str(e)}")
+        print("Falling back to basic enhancement...")
+
+        # Fallback to basic keyword similarity if LLM fails
+        enhanced_relationships = fallback_similarity_detection(schema)
+        schema.metadata["llm_enhanced"] = False
+        schema.metadata["llm_error"] = str(e)
+        schema.metadata["fallback_used"] = True
+        schema.relationships = enhanced_relationships
+
+    return schema
+
+def find_nodes_by_description(schema: GraphSchema, description: str, max_results: int = 5) -> List[str]:
+    """
+    Find nodes that match a given description using fuzzy matching.
+
+    Args:
+        schema: Graph schema
+        description: Description to search for
+        max_results: Maximum number of results to return
+
+    Returns:
+        List of matching node IDs
+    """
+    matching_nodes = []
+    search_terms = set(description.lower().split())
+
+    for node_id, node_props in schema.nodes.items():
+        node_desc = node_props.description.lower()
+        node_title = node_props.title.lower()
+
+        # Check if search terms appear in description or title
+        desc_matches = sum(1 for term in search_terms if term in node_desc)
+        title_matches = sum(1 for term in search_terms if term in node_title)
+
+        # Calculate match score
+        total_terms = len(search_terms)
+        match_score = (desc_matches + title_matches) / total_terms if total_terms > 0 else 0
+
+        if match_score > 0.3:  # 30% term match threshold
+            matching_nodes.append((node_id, match_score))
+
+    # Sort by match score and return top results
+    matching_nodes.sort(key=lambda x: x[1], reverse=True)
+    return [node_id for node_id, score in matching_nodes[:max_results]]
+
+def find_nodes_by_category(schema: GraphSchema, category: str, max_results: int = 5) -> List[str]:
+    """
+    Find nodes that belong to a specific category.
+
+    Args:
+        schema: Graph schema
+        category: Category to search for
+        max_results: Maximum number of results to return
+
+    Returns:
+        List of matching node IDs
+    """
+    matching_nodes = []
+    category_lower = category.lower()
+
+    for node_id, node_props in schema.nodes.items():
+        # Check if category appears in title, description, or search keywords
+        title_match = category_lower in node_props.title.lower() if node_props.title else False
+        desc_match = category_lower in node_props.description.lower() if node_props.description else False
+        keyword_match = any(category_lower in keyword.lower() for keyword in
+                          (node_props.search_keywords.split(', ') if node_props.search_keywords else []))
+
+        if title_match or desc_match or keyword_match:
+            matching_nodes.append(node_id)
+
+        if len(matching_nodes) >= max_results:
+            break
+
+    return matching_nodes[:max_results]
+
+def discover_cross_domain_relationships_llm(llm_client: LangChainLLMClient, schema: GraphSchema, hsn_nodes: Dict[str, NodeProperties]) -> List[Relationship]:
+    """
+    Discover cross-domain relationships using LLM analysis.
+
+    Args:
+        llm_client: Initialized LLM client
+        schema: Graph schema
+        hsn_nodes: HSN nodes to analyze
+
+    Returns:
+        List of discovered relationships
+    """
+    relationships = []
+
+    try:
+        # Sample a few nodes from different chapters for cross-domain analysis
+        chapter_groups = {}
+        for node_id, props in hsn_nodes.items():
+            chapter = props.chapter
+            if chapter not in chapter_groups:
+                chapter_groups[chapter] = []
+            chapter_groups[chapter].append((node_id, props))
+
+        # Get 2 nodes from each chapter for cross-domain analysis
+        cross_domain_candidates = []
+        for chapter, nodes in chapter_groups.items():
+            cross_domain_candidates.extend(nodes[:2])
+
+        print(f"Analyzing {len(cross_domain_candidates)} nodes for cross-domain relationships...")
+
+        # Analyze cross-domain relationships in small batches
+        for i in range(0, len(cross_domain_candidates), 3):
+            batch = cross_domain_candidates[i:i+3]
+
+            for j, (node_id1, props1) in enumerate(batch):
+                for node_id2, props2 in batch[j+1:]:
+                    # Skip if same chapter
+                    if props1.chapter == props2.chapter:
+                        continue
+
+                    # Use LLM to check for cross-domain relationships
+                    prompt = f"""
+                    Analyze if these two products from different HSN chapters might be related:
+
+                    Product 1: {props1.description} (HSN: {props1.code}, Chapter: {props1.chapter})
+                    Product 2: {props2.description} (HSN: {props2.code}, Chapter: {props2.chapter})
+
+                    Are these products related in terms of:
+                    1. Manufacturing process similarity?
+                    2. Material composition similarity?
+                    3. End-use application similarity?
+                    4. Supply chain relationship?
+
+                    If they are related, explain how. If not, say "no relationship".
+
+                    Keep response under 100 words.
+                    """
+
+                    try:
+                        response = llm_client.llm.invoke(prompt).content.strip()
+
+                        if "no relationship" not in response.lower() and len(response) > 20:
+                            relationships.append(Relationship(
+                                source_id=node_id1,
+                                target_id=node_id2,
+                                type=RelationshipType.HAS_SIMILAR_DESCRIPTION,
+                                properties={
+                                    "similarity_score": 0.6,
+                                    "llm_discovered": True,
+                                    "cross_domain": True,
+                                    "relationship_reason": response[:200],
+                                    "chapter_difference": f"{props1.chapter} -> {props2.chapter}"
+                                }
+                            ))
+                    except Exception as e:
+                        print(f"WARNING: Cross-domain analysis failed for {node_id1}-{node_id2}: {str(e)}")
+                        continue
+
+    except Exception as e:
+        print(f"ERROR: Cross-domain relationship discovery failed: {str(e)}")
+
+    return relationships
+
+def discover_semantic_relationships_llm(llm_client: LangChainLLMClient, schema: GraphSchema) -> List[Relationship]:
+    """
+    Discover semantic relationships across different hierarchy levels using LLM.
+
+    Args:
+        llm_client: Initialized LLM client
+        schema: Graph schema
+
+    Returns:
+        List of discovered semantic relationships
+    """
+    relationships = []
+
+    try:
+        # Get chapter and heading nodes for semantic analysis
+        chapters = {nid: props for nid, props in schema.nodes.items() if nid.startswith('chapter_')}
+        headings = {nid: props for nid, props in schema.nodes.items() if nid.startswith('heading_')}
+
+        print(f"Analyzing semantic relationships between {len(chapters)} chapters and {len(headings)} headings...")
+
+        # Analyze semantic relationships between chapters and their headings
+        for chapter_id, chapter_props in chapters.items():
+            chapter_code = chapter_props.code
+
+            # Find headings that belong to this chapter
+            chapter_headings = []
+            for heading_id, heading_props in headings.items():
+                if str(heading_props.code).startswith(str(chapter_code)):
+                    chapter_headings.append((heading_id, heading_props))
+
+            if len(chapter_headings) > 1:
+                # Use LLM to analyze semantic coherence within the chapter
+                heading_descriptions = [f"- {props.description}" for _, props in chapter_headings[:5]]
+
+                prompt = f"""
+                Analyze the semantic coherence of products within HSN Chapter {chapter_code}:
+
+                Chapter Description: {chapter_props.description}
+
+                Products in this chapter:
+                {chr(10).join(heading_descriptions)}
+
+                Are all these products semantically related? Do they share common themes, materials, or applications?
+
+                Provide a brief analysis (under 150 words) of the chapter's semantic coherence.
+                """
+
+                try:
+                    response = llm_client.llm.invoke(prompt).content.strip()
+
+                    # Create semantic relationships based on LLM analysis
+                    for i, (heading_id1, _) in enumerate(chapter_headings):
+                        for heading_id2, _ in chapter_headings[i+1:]:
+                            relationships.append(Relationship(
+                                source_id=heading_id1,
+                                target_id=heading_id2,
+                                type=RelationshipType.HAS_SIMILAR_DESCRIPTION,
+                                properties={
+                                    "similarity_score": 0.9,  # High confidence for same chapter
+                                    "llm_discovered": True,
+                                    "semantic_analysis": response[:300],
+                                    "relationship_type": "chapter_coherence",
+                                    "shared_chapter": chapter_code
+                                }
+                            ))
+
+                except Exception as e:
+                    print(f"WARNING: Semantic analysis failed for chapter {chapter_code}: {str(e)}")
+                    continue
+
+    except Exception as e:
+        print(f"ERROR: Semantic relationship discovery failed: {str(e)}")
+
+    return relationships
+
+def fallback_similarity_detection(schema: GraphSchema) -> List[Relationship]:
+    """
+    Fallback similarity detection using basic keyword matching when LLM fails.
+
+    Args:
+        schema: Graph schema
+
+    Returns:
+        List of relationships discovered through basic similarity
+    """
+    print("Using fallback keyword-based similarity detection...")
 
     enhanced_relationships = schema.relationships.copy()
 
-    # Find similar descriptions within the same level
+    # Basic keyword similarity (original implementation)
     nodes_by_level = {}
     for node_id, node_props in schema.nodes.items():
         level = node_props.level
@@ -408,7 +780,6 @@ def enhance_schema_with_llm(schema: GraphSchema, df: pd.DataFrame) -> GraphSchem
             nodes_by_level[level] = []
         nodes_by_level[level].append((node_id, node_props))
 
-    # Simple keyword-based similarity (placeholder for LLM similarity)
     for level, nodes_list in nodes_by_level.items():
         if len(nodes_list) < 2:
             continue
@@ -419,55 +790,24 @@ def enhance_schema_with_llm(schema: GraphSchema, df: pd.DataFrame) -> GraphSchem
             for j, (node_id2, props2) in enumerate(nodes_list[i+1:], i+1):
                 keywords2 = set(props2.search_keywords.lower().split(', ')) if props2.search_keywords else set()
 
-                # Calculate simple Jaccard similarity
                 if keywords1 and keywords2:
                     intersection = keywords1.intersection(keywords2)
                     union = keywords1.union(keywords2)
                     similarity = len(intersection) / len(union) if union else 0
 
-                    if similarity > 0.3:  # Similarity threshold
+                    if similarity > 0.3:
                         enhanced_relationships.append(Relationship(
                             source_id=node_id1,
                             target_id=node_id2,
                             type=RelationshipType.HAS_SIMILAR_DESCRIPTION,
                             properties={
                                 "similarity_score": similarity,
-                                "shared_keywords": list(intersection)[:5]  # Limit to top 5
+                                "shared_keywords": list(intersection)[:5],
+                                "fallback_method": True
                             }
                         ))
 
-    # Find nodes with same export policy
-    policy_groups = {}
-    for node_id, node_props in schema.nodes.items():
-        policy = node_props.export_policy.strip()
-        if policy:
-            if policy not in policy_groups:
-                policy_groups[policy] = []
-            policy_groups[policy].append(node_id)
-
-    for policy, node_ids in policy_groups.items():
-        if len(node_ids) > 1:
-            for i, node_id1 in enumerate(node_ids):
-                for node_id2 in node_ids[i+1:]:
-                    enhanced_relationships.append(Relationship(
-                        source_id=node_id1,
-                        target_id=node_id2,
-                        type=RelationshipType.SHARES_EXPORT_POLICY,
-                        properties={
-                            "policy_type": policy,
-                            "policy_details": f"Shared export policy: {policy}"
-                        }
-                    ))
-
-    # Update metadata
-    schema.metadata["llm_enhanced"] = True
-    schema.metadata["total_relationships_llm"] = len(enhanced_relationships)
-    schema.metadata["new_relationships"] = len(enhanced_relationships) - len(schema.relationships)
-
-    schema.relationships = enhanced_relationships
-
-    print(f"SUCCESS: Schema enhanced with {len(enhanced_relationships) - len(schema.relationships)} additional relationships")
-    return schema
+    return enhanced_relationships
 
 def validate_graph_schema(schema: GraphSchema, df: pd.DataFrame) -> Dict[str, Any]:
     """
