@@ -229,10 +229,11 @@ The automated setup scripts handle the complete system initialization:
    - Installs all required packages from `requirements.txt`
 
 3. **Data Processing Pipeline**:
-   - **Data Extraction**: Extracts HSN data from PDF documents
-   - **Data Enhancement**: Processes and structures the data
-   - **Vector Store Creation**: Builds FAISS vector embeddings
-   - **Knowledge Graph Creation**: Constructs NetworkX knowledge graph
+    - **Data Extraction**: Extracts HSN data from PDF documents
+    - **Data Enhancement**: Processes and structures the data
+    - **Graph Schema Design**: Creates graph nodes, relationships, and schema files
+    - **Vector Store Creation**: Builds FAISS vector embeddings
+    - **Knowledge Graph Creation**: Constructs NetworkX knowledge graph from schema
 
 4. **System Validation**:
    - Tests system initialization
@@ -253,6 +254,11 @@ output/
 ├── data/
 │   ├── extraction_complete.csv      # Raw extracted data
 │   ├── sample_enhanced_data.csv     # Processed data
+│   ├── graph_nodes.json             # Graph nodes data (JSON)
+│   ├── graph_relationships.json     # Graph relationships data (JSON)
+│   ├── graph_schema.json            # Complete graph schema definition
+│   ├── graph_nodes.csv              # Graph nodes data (CSV)
+│   ├── graph_relationships.csv      # Graph relationships data (CSV)
 │   └── graph_schema_documentation.md # Graph documentation
 ├── vectors/
 │   ├── hsn_faiss_index.idx         # FAISS index
@@ -260,7 +266,7 @@ output/
 │   ├── hsn_vector_config.json      # Vector store config
 │   └── hsn_vector_data.pkl         # Vector metadata
 ├── models/
-│   └── hsn_knowledge_graph.pkl     # Knowledge graph
+│   └── hsn_knowledge_graph.pkl     # Knowledge graph (NetworkX)
 ├── logs/
 │   └── hsn_rag_system.log          # System logs
 └── reports/

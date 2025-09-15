@@ -109,12 +109,27 @@ if exist "output\vectors\hsn_vector_config.json" (
 )
 echo.
 
+REM Check if graph schema needs to be built
+echo 8. Checking graph schema...
+if exist "output\data\graph_schema.json" (
+    echo INFO: Graph schema already exists, skipping design phase...
+) else (
+    echo INFO: Building graph schema, nodes, and relationships...
+    python src\knowledge_graph\graph_design.py
+    if %errorlevel% neq 0 (
+        echo ERROR: Graph schema creation failed
+        pause
+        exit /b 1
+    )
+    echo SUCCESS: Graph schema, nodes, and relationships created
+)
+
 REM Check if knowledge graph needs to be built
-echo 8. Checking knowledge graph...
+echo 9. Checking knowledge graph...
 if exist "output\models\hsn_knowledge_graph.pkl" (
     echo INFO: Knowledge graph already exists, skipping...
 ) else (
-    echo INFO: Building knowledge graph...
+    echo INFO: Building knowledge graph from schema...
     python src\knowledge_graph\graph_implementation.py
     if %errorlevel% neq 0 (
         echo ERROR: Knowledge graph creation failed
@@ -126,7 +141,7 @@ if exist "output\models\hsn_knowledge_graph.pkl" (
 echo.
 
 REM Test system initialization
-echo 9. Testing system initialization...
+echo 10. Testing system initialization...
 python -c "
 from src.rag_system.hsn_rag_system import HSN_RAG_System
 system = HSN_RAG_System()
