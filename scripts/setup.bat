@@ -39,10 +39,10 @@ echo 4. Installing requirements...
 where uv >nul 2>nul
 if %errorlevel% equ 0 (
     echo INFO: Using uv package manager for faster installation...
-    uv pip install -r requirements.txt
+    uv pip install -r ../requirements.txt
     if %errorlevel% neq 0 (
         echo WARNING: uv failed, falling back to pip...
-        pip install -r requirements.txt
+        pip install -r ../requirements.txt
         if %errorlevel% neq 0 (
             echo ERROR: Failed to install requirements with both uv and pip
             pause
@@ -51,7 +51,7 @@ if %errorlevel% equ 0 (
     )
 ) else (
     echo INFO: uv not found, using pip...
-    pip install -r requirements.txt
+    pip install -r ../requirements.txt
     if %errorlevel% neq 0 (
         echo ERROR: Failed to install requirements
         pause
@@ -63,11 +63,11 @@ echo.
 
 REM Check if data extraction is needed
 echo 5. Checking data extraction...
-if exist "output\data\extraction_complete.csv" (
+if exist "..\output\data\extraction_complete.csv" (
     echo INFO: Data extraction already completed, skipping...
 ) else (
     echo INFO: Running data extraction...
-    python src\data_processing\test_extraction.py
+    python ..\src\data_processing\test_extraction.py
     if %errorlevel% neq 0 (
         echo ERROR: Data extraction failed
         pause
@@ -79,11 +79,11 @@ echo.
 
 REM Check if data enhancement is needed
 echo 6. Checking data enhancement...
-if exist "output\data\sample_enhanced_data.csv" (
+if exist "..\output\data\sample_enhanced_data.csv" (
     echo INFO: Data enhancement already completed, skipping...
 ) else (
     echo INFO: Running data enhancement...
-    python src\data_processing\test_enhancement.py
+    python ..\src\data_processing\test_enhancement.py
     if %errorlevel% neq 0 (
         echo ERROR: Data enhancement failed
         pause
@@ -95,11 +95,11 @@ echo.
 
 REM Check if vector store needs to be built
 echo 7. Checking vector store...
-if exist "output\vectors\hsn_vector_config.json" (
+if exist "..\output\vectors\hsn_vector_config.json" (
     echo INFO: Vector store already exists, skipping...
 ) else (
     echo INFO: Building vector store...
-    python src\rag_system\vector_store.py
+    python ..\src\rag_system\vector_store.py
     if %errorlevel% neq 0 (
         echo ERROR: Vector store creation failed
         pause
@@ -111,11 +111,11 @@ echo.
 
 REM Check if graph schema needs to be built
 echo 8. Checking graph schema...
-if exist "output\data\graph_schema.json" (
+if exist "..\output\data\graph_schema.json" (
     echo INFO: Graph schema already exists, skipping design phase...
 ) else (
     echo INFO: Building graph schema, nodes, and relationships...
-    python src\knowledge_graph\graph_design.py
+    python ..\src\knowledge_graph\graph_design.py
     if %errorlevel% neq 0 (
         echo ERROR: Graph schema creation failed
         pause
@@ -126,11 +126,11 @@ if exist "output\data\graph_schema.json" (
 
 REM Check if knowledge graph needs to be built
 echo 9. Checking knowledge graph...
-if exist "output\models\hsn_knowledge_graph.pkl" (
+if exist "..\output\models\hsn_knowledge_graph.pkl" (
     echo INFO: Knowledge graph already exists, skipping...
 ) else (
     echo INFO: Building knowledge graph from schema...
-    python src\knowledge_graph\graph_implementation.py
+    python ..\src\knowledge_graph\graph_implementation.py
     if %errorlevel% neq 0 (
         echo ERROR: Knowledge graph creation failed
         pause
@@ -169,8 +169,8 @@ echo Your HSN RAG System is now ready!
 echo.
 echo To run the system:
 echo 1. Activate the environment: call hsn_env\Scripts\activate.bat
-echo 2. Run the web app: streamlit run app.py
-echo    OR run CLI: python main.py
+echo 2. Run the web app: streamlit run ../app.py
+echo    OR run CLI: python ../main.py
 echo.
 echo For inference and testing, use run.bat
 echo.

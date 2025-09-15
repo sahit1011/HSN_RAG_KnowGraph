@@ -37,10 +37,10 @@ echo
 echo "4. Installing requirements..."
 if command -v uv &> /dev/null; then
     echo "INFO: Using uv package manager for faster installation..."
-    uv pip install -r requirements.txt
+    uv pip install -r ../requirements.txt
     if [ $? -ne 0 ]; then
         echo "WARNING: uv failed, falling back to pip..."
-        pip install -r requirements.txt
+        pip install -r ../requirements.txt
         if [ $? -ne 0 ]; then
             echo "ERROR: Failed to install requirements with both uv and pip"
             exit 1
@@ -48,7 +48,7 @@ if command -v uv &> /dev/null; then
     fi
 else
     echo "INFO: uv not found, using pip..."
-    pip install -r requirements.txt
+    pip install -r ../requirements.txt
     if [ $? -ne 0 ]; then
         echo "ERROR: Failed to install requirements"
         exit 1
@@ -59,11 +59,11 @@ echo
 
 # Check if data extraction is needed
 echo "5. Checking data extraction..."
-if [ -f "output/data/extraction_complete.csv" ]; then
+if [ -f "../output/data/extraction_complete.csv" ]; then
     echo "INFO: Data extraction already completed, skipping..."
 else
     echo "INFO: Running data extraction..."
-    python src/data_processing/test_extraction.py
+    python ../src/data_processing/test_extraction.py
     if [ $? -ne 0 ]; then
         echo "ERROR: Data extraction failed"
         exit 1
@@ -74,11 +74,11 @@ echo
 
 # Check if data enhancement is needed
 echo "6. Checking data enhancement..."
-if [ -f "output/data/sample_enhanced_data.csv" ]; then
+if [ -f "../output/data/sample_enhanced_data.csv" ]; then
     echo "INFO: Data enhancement already completed, skipping..."
 else
     echo "INFO: Running data enhancement..."
-    python src/data_processing/test_enhancement.py
+    python ../src/data_processing/test_enhancement.py
     if [ $? -ne 0 ]; then
         echo "ERROR: Data enhancement failed"
         exit 1
@@ -89,11 +89,11 @@ echo
 
 # Check if vector store needs to be built
 echo "7. Checking vector store..."
-if [ -f "output/vectors/hsn_vector_config.json" ]; then
+if [ -f "../output/vectors/hsn_vector_config.json" ]; then
     echo "INFO: Vector store already exists, skipping..."
 else
     echo "INFO: Building vector store..."
-    python src/rag_system/vector_store.py
+    python ../src/rag_system/vector_store.py
     if [ $? -ne 0 ]; then
         echo "ERROR: Vector store creation failed"
         exit 1
@@ -104,11 +104,11 @@ echo
 
 # Check if knowledge graph needs to be built
 echo "8. Checking knowledge graph..."
-if [ -f "output/models/hsn_knowledge_graph.pkl" ]; then
+if [ -f "../output/models/hsn_knowledge_graph.pkl" ]; then
     echo "INFO: Knowledge graph already exists, skipping..."
 else
     echo "INFO: Building knowledge graph..."
-    python src/knowledge_graph/graph_implementation.py
+    python ../src/knowledge_graph/graph_implementation.py
     if [ $? -ne 0 ]; then
         echo "ERROR: Knowledge graph creation failed"
         exit 1
@@ -145,8 +145,8 @@ echo "Your HSN RAG System is now ready!"
 echo
 echo "To run the system:"
 echo "1. Activate the environment: source hsn_env/bin/activate"
-echo "2. Run the web app: streamlit run app.py"
-echo "   OR run CLI: python main.py"
+echo "2. Run the web app: streamlit run ../app.py"
+echo "   OR run CLI: python ../main.py"
 echo
 echo "For inference and testing, use run.sh"
 echo

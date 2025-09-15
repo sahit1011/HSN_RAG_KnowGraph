@@ -37,23 +37,25 @@ hsn_rag/
 │   │   ├── llm_client.py
 │   │   └── __init__.py
 │   └── __init__.py
+├── scripts/                      # Setup and run scripts
+│   ├── setup.bat                 # Windows setup script
+│   ├── setup.sh                  # Linux/macOS setup script
+│   ├── run.bat                   # Windows run script
+│   └── run.sh                    # Linux/macOS run script
 ├── output/                       # Generated data and models (created during setup)
 │   ├── data/                     # Processed data files
 │   ├── models/                   # Trained models
 │   ├── vectors/                  # Vector embeddings
 │   ├── logs/                     # System logs
 │   └── reports/                  # Performance reports
-├── setup.bat                     # Windows setup script
-├── setup.sh                      # Linux/macOS setup script
-├── run.bat                       # Windows run script
-├── run.sh                        # Linux/macOS run script
+├── docs/                         # Documentation
+│   ├── plan.md                   # Project documentation
+│   └── iteration_workflow.md     # Workflow documentation
 ├── main.py                       # CLI entry point
 ├── app.py                        # Streamlit web app
 ├── config.py                     # Configuration settings
 ├── requirements.txt              # Python dependencies
 ├── .gitignore                    # Git ignore rules
-├── plan.md                       # Project documentation
-├── docs/                         # Additional documentation
 └── README.md                     # This file
 ```
 
@@ -76,21 +78,21 @@ hsn_rag/
 3. **Run the automated setup**:
     ```bash
     # Windows
-    setup.bat
+    scripts\setup.bat
 
     # Linux/macOS
-    chmod +x setup.sh
-    ./setup.sh
+    chmod +x scripts/setup.sh
+    ./scripts/setup.sh
     ```
 
 3. **Launch the application**:
     ```bash
     # Windows
-    run.bat
+    scripts\run.bat
 
     # Linux/macOS
-    chmod +x run.sh
-    ./run.sh
+    chmod +x scripts/run.sh
+    ./scripts/run.sh
     ```
 
 That's it! The system will automatically:
@@ -216,7 +218,7 @@ results = system.batch_classify(queries)
 
 The automated setup scripts handle the complete system initialization:
 
-### What `setup.bat`/`setup.sh` Does:
+### What `scripts/setup.bat`/`scripts/setup.sh` Does:
 
 1. **Environment Setup**:
    - Creates Python virtual environment (`hsn_env/`)
@@ -240,7 +242,7 @@ The automated setup scripts handle the complete system initialization:
    - Verifies all components are working
    - Provides setup summary
 
-### What `run.bat`/`run.sh` Does:
+### What `scripts/run.bat`/`scripts/run.sh` Does:
 
 1. **Environment Activation**: Activates the virtual environment
 2. **System Validation**: Checks if all required files exist
@@ -399,8 +401,8 @@ class HSNClassificationResult:
 ### Local Development (Automated)
 
 1. Clone repository: `git clone https://github.com/sahit1011/HSN_RAG_KnowGraph.git`
-2. Run setup: `./setup.sh` (Linux/macOS) or `setup.bat` (Windows)
-3. Launch app: `./run.sh` (Linux/macOS) or `run.bat` (Windows)
+2. Run setup: `./scripts/setup.sh` (Linux/macOS) or `scripts\setup.bat` (Windows)
+3. Launch app: `./scripts/run.sh` (Linux/macOS) or `scripts\run.bat` (Windows)
 
 ### Local Development (Manual)
 
@@ -463,7 +465,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 For questions or issues:
 
 1. Check the [Issues](https://github.com/sahit1011/HSN_RAG_KnowGraph/issues) page
-2. Review the documentation in `plan.md`
+2. Review the documentation in `docs/plan.md`
 3. Check the setup scripts for common issues
 4. Contact the development team
 
