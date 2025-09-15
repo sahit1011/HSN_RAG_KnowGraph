@@ -79,6 +79,7 @@ hsn_env/
 
 # Large data files
 *.pdf
+!Trade_Notice_First_50_Pages.pdf
 
 # Jupyter Notebook
 .ipynb_checkpoints
