@@ -52,6 +52,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+!output/logs/.gitkeep
 
 # Temporary files
 *.tmp
@@ -68,6 +69,10 @@ output/**/*.html
 
 # Specifically exclude large files
 output/data/graph_schema.json
+
+# Allow .gitkeep files to preserve directory structure
+!.gitkeep
+!output/**/.gitkeep
 
 # Virtual environment
 hsn_env/
