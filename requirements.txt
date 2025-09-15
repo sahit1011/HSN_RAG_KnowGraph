@@ -1,0 +1,53 @@
+# Core dependencies
+streamlit>=1.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+
+# NLP and embeddings
+sentence-transformers>=2.2.0
+transformers>=4.30.0
+torch>=2.0.0
+
+# Vector search
+faiss-cpu>=1.7.0
+chromadb>=0.4.0
+
+# Graph processing
+networkx>=3.0
+matplotlib>=3.7.0
+plotly>=5.15.0
+
+# PDF processing
+PyPDF2>=3.0.0
+pdfplumber>=0.9.0
+
+# Data processing
+openpyxl>=3.1.0
+python-docx>=1.1.0
+
+# Utilities
+pathlib2>=2.3.0
+typing-extensions>=4.7.0
+tqdm>=4.65.0
+
+# Optional: OpenAI integration
+openai>=1.0.0
+
+# HTTP requests for API calls
+requests>=2.31.0
+
+# Environment variable management
+python-dotenv>=1.0.0
+
+# LangChain for LLM integration and graph construction
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langchain-community>=0.0.20
+langgraph>=0.1.0
+
+# Development dependencies
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0

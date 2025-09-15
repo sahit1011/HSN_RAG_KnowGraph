@@ -1,0 +1,82 @@
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+
+# API keys and credentials
+*.key
+*.pem
+secrets.json
+secure_config.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Output directories - keep structure but exclude large files
+output/**/*.pkl
+output/**/*.npy
+output/**/*.idx
+output/**/*.csv
+output/**/*.json
+output/**/*.png
+output/**/*.html
+
+# Specifically exclude large files
+output/data/graph_schema.json
+
+# Virtual environment
+hsn_env/
+
+# Large data files
+*.pdf
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Streamlit
+.streamlit/secrets.toml
