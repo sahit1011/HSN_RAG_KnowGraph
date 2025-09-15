@@ -67,7 +67,13 @@ hsn_rag/
     cd HSN_RAG_KnowGraph
     ```
 
-2. **Run the automated setup**:
+2. **Set up environment variables** (optional but recommended):
+    ```bash
+    cp .env.example .env
+    # Edit .env with your API keys and preferences
+    ```
+
+3. **Run the automated setup**:
     ```bash
     # Windows
     setup.bat
@@ -122,7 +128,9 @@ If you prefer manual setup:
 
 4. **Set up environment variables** (optional):
     ```bash
-    export OPENAI_API_KEY="your-api-key-here"
+    export OPENROUTER_API_KEY="your-openrouter-api-key-here"
+    # Or optionally use OpenAI
+    export OPENAI_API_KEY="your-openai-api-key-here"
     ```
 
 ## 🚀 Usage
@@ -419,7 +427,9 @@ class HSNClassificationResult:
     ```bash
     export STREAMLIT_SERVER_PORT=8501
     export STREAMLIT_SERVER_ADDRESS=0.0.0.0
-    export OPENAI_API_KEY="your-production-key"
+    export OPENROUTER_API_KEY="your-openrouter-api-key"
+    # Or optionally use OpenAI
+    export OPENAI_API_KEY="your-openai-api-key"
     ```
 
 3. **Build and Run**:
